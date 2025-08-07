@@ -178,6 +178,9 @@ def create_highlight_video(score_csv_file, highlight_duration=7, include_overlay
         _, start1, start2, _ = next(reader)
         events = [(datetime.strptime(r[0], '%H:%M:%S'), int(r[1]), int(r[2]), int(r[3])) for r in reader]
 
+    if not events:
+        return None
+
     start1, start2 = int(start1), int(start2)
     cur1, cur2 = start1, start2
     clips, team1_bg, team1_fg = [], *get_team_colors(team_one, (255, 255, 0), (0, 0, 0))
@@ -338,16 +341,21 @@ print("Sorted CSV files:", csv_files)
 highlight_paths = []
 for csv_file in csv_files:
     highlight_path = create_highlight_video(os.path.join(input_dir, csv_file))
+    if highlight_path is None:
+        continue
     split_video(highlight_path)
     highlight_paths.append(highlight_path)
 
 # Step 5: Combine highlights
-final_clip = concatenate_videoclips([VideoFileClip(p) for p in highlight_paths])
-final_path = "combined_highlights.mp4"
-final_clip.write_videofile(final_path, codec='libx264', audio_codec='aac')
+if highlight_paths:
+    final_clip = concatenate_videoclips([VideoFileClip(p) for p in highlight_paths])
+    final_path = "combined_highlights.mp4"
+    final_clip.write_videofile(final_path, codec='libx264', audio_codec='aac')
 
-# Step 6: Upload to YouTube
-today_str = datetime.now().strftime("%b %d")
-title = f"{today_str} - Highlights"
-description = f"Highlights of the game played in Pune on {today_str} by local Pune footballers."
-upload_video_to_youtube(final_path, title, description)
+    # Step 6: Upload to YouTube
+    today_str = datetime.now().strftime("%b %d")
+    title = f"{today_str} - Highlights"
+    description = f"Highlights of the game played in Pune on {today_str} by local Pune footballers."
+    upload_video_to_youtube(final_path, title, description)
+else:
+    print("No highlight videos generated; skipping combination and upload.")
